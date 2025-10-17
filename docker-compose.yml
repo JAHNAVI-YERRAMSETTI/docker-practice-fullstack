@@ -1,0 +1,52 @@
+services:
+  mysqldb:
+    container_name: mysql-db
+    image: mysql:8
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: projectdb
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - taskmanager-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  backend:
+    container_name: taskmanager-backend
+    build:
+      context: ./springbootbackend
+      dockerfile: ../FULLSTACK/backend.Dockerfile
+    ports:
+      - "2029:2000"
+    depends_on:
+      mysqldb:
+        condition: service_healthy
+    restart: on-failure
+    networks:
+      - taskmanager-network
+
+  frontend:
+    container_name: taskmanager-frontend
+    build:
+      context: ./reactfrontend
+      dockerfile: ../FULLSTACK/frontend.Dockerfile
+    ports:
+      - "2097:80"
+    depends_on:
+      - backend
+    networks:
+      - taskmanager-network
+
+volumes:
+  mysql-data:
+
+networks:
+  taskmanager-network:
+    driver: bridge
